@@ -27,7 +27,6 @@ def check_stealer_log_and_breach(email):
     """
     print(f"\n[*] 2. Enhancing Data Breach & Stealer Log Check for: {email}...")
     
-    # --- MOCK DATA UNTUK TESTING AKURASI SCRIPT ---
     if email.lower() == "test@gmail.com":
         print("    [DEBUG] Running Mock Breach Test Mode...")
         return {
@@ -45,7 +44,6 @@ def check_stealer_log_and_breach(email):
                 "operating_system": "Windows 10 Pro"
             }
         }
-    # ----------------------------------------------
 
     url = f"https://cavalier.hudsonrock.com/api/v1/osint-tools/search-by-email?email={email}"
     headers = {
