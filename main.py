@@ -23,28 +23,10 @@ def check_holehe(email):
 
 def check_stealer_log_and_breach(email):
     """
-    Module 2: Enhanced Stealer Log & Data Breach Analysis (Hudson Rock OSINT API)
+    Module 2: Enhanced Stealer Log & Data Breach Analysis (Hudson Rock OSINT API Live)
     """
     print(f"\n[*] 2. Enhancing Data Breach & Stealer Log Check for: {email}...")
     
-    if email.lower() == "test@gmail.com":
-        print("    [DEBUG] Running Mock Breach Test Mode...")
-        return {
-            "status": "COMPROMISED",
-            "is_breached": True,
-            "summary": {
-                "stealer_logs_found": 12,
-                "compromised_passwords": 34,
-                "malware_family": "RedLine Stealer / Lumma",
-                "top_domains_leaked": ["facebook.com", "binance.com", "netlfix.com"]
-            },
-            "raw_details": {
-                "stealer_id": "ST-994812",
-                "computer_name": "DESKTOP-VICTIM-01",
-                "operating_system": "Windows 10 Pro"
-            }
-        }
-
     url = f"https://cavalier.hudsonrock.com/api/v1/osint-tools/search-by-email?email={email}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -53,6 +35,7 @@ def check_stealer_log_and_breach(email):
     try:
         response = requests.get(url, headers=headers, timeout=12)
         
+        # Jika email beneran COMPROMISED / Kena Breach
         if response.status_code == 200:
             raw_data = response.json()
             return {
@@ -64,6 +47,7 @@ def check_stealer_log_and_breach(email):
                 },
                 "raw_details": raw_data
             }
+        # Jika email beneran CLEAN / Aman
         elif response.status_code == 404:
             return {
                 "status": "CLEAN",
