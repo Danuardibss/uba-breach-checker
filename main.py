@@ -1,13 +1,14 @@
 import subprocess
 import json
-import requests
 import os
+import asyncio
+import concurrent.futures
+import requests
 
-def check_holehe(email):
+def check_holehe_sync(email):
     """
     Module 1: Social Media Account Footprint Enumeration (Holehe)
     """
-    print(f"\n[*] 1. Running Holehe Footprint for: {email}...")
     try:
         bat_path = os.path.join(os.getcwd(), "holehe.bat")
         
@@ -21,21 +22,18 @@ def check_holehe(email):
     except Exception as e:
         return f"Error executing Holehe: {str(e)}"
 
-def check_stealer_log_and_breach(email):
+def check_stealer_log_and_breach_sync(email):
     """
     Module 2: Enhanced Stealer Log & Data Breach Analysis (Hudson Rock OSINT API Live)
     """
-    print(f"\n[*] 2. Enhancing Data Breach & Stealer Log Check for: {email}...")
-    
     url = f"https://cavalier.hudsonrock.com/api/v1/osint-tools/search-by-email?email={email}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=12)
+        response = requests.get(url, headers=headers, timeout=8)
         
-        # Jika email beneran COMPROMISED / Kena Breach
         if response.status_code == 200:
             raw_data = response.json()
             return {
@@ -47,7 +45,6 @@ def check_stealer_log_and_breach(email):
                 },
                 "raw_details": raw_data
             }
-        # Jika email beneran CLEAN / Aman
         elif response.status_code == 404:
             return {
                 "status": "CLEAN",
@@ -66,19 +63,36 @@ def check_stealer_log_and_breach(email):
             "message": f"Connection/Script Error: {str(e)}"
         }
 
-def run_full_scan(email):
+async def run_full_scan_async(email):
+    """
+    Async Wrapper: Menjalankan Holehe dan Hudson Rock API secara PARALEL untuk efisiensi kecepatan.
+    """
     print("====================================================")
     print("   UBA OSINT & DATA BREACH CHECKER MODULE (DANU)   ")
     print("====================================================")
+    print(f"[*] Starting Parallel Async Scan for: {email}...")
+
+    loop = asyncio.get_running_loop()
     
-    footprint_res = check_holehe(email)
-    breach_res = check_stealer_log_and_breach(email)
-    
+    # Menjalankan kedua modul secara serentak di ThreadPool terpisah
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        task_footprint = loop.run_in_executor(pool, check_holehe_sync, email)
+        task_breach = loop.run_in_executor(pool, check_stealer_log_and_breach_sync, email)
+        
+        # Nunggu kedua task selesai barengan
+        footprint_res, breach_res = await asyncio.gather(task_footprint, task_breach)
+
     return {
         "target_email": email,
         "footprint_raw": footprint_res,
         "stealer_and_breach_data": breach_res
     }
+
+def run_full_scan(email):
+    """
+    Fungsi Synchronous wrapper biar Fahri & Adema gampang panggilnya (main.run_full_scan(email)).
+    """
+    return asyncio.run(run_full_scan_async(email))
 
 if __name__ == "__main__":
     target = input("\nMasukkan email target: ").strip()
