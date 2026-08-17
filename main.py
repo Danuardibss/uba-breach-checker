@@ -63,34 +63,76 @@ def check_stealer_log_and_breach_sync(email):
             "message": f"Connection/Script Error: {str(e)}"
         }
 
+def run_crawlee_scraper_sync(target_keyword):
+    """
+    Module 3: Real-Time Web & OSINT Scraper via Crawlee (Playwright Engine)
+    """
+    try:
+        # Panggil node script crawlee_scraper.mjs
+        process = subprocess.run(
+            ["node", "crawlee_scraper.mjs", target_keyword],
+            capture_output=True,
+            text=True,
+            timeout=50
+        )
+        
+        output_str = process.stdout.strip()
+        
+        # Ambil baris JSON terakhir dari stdout Node.js
+        json_line = [line for line in output_str.split('\n') if line.startswith('[')]
+        
+        if json_line:
+            parsed_data = json.loads(json_line[-1])
+            return {
+                "status": "SUCCESS",
+                "total_results": len(parsed_data),
+                "crawled_data": parsed_data
+            }
+        else:
+            return {
+                "status": "EMPTY_OR_BLOCKED",
+                "total_results": 0,
+                "crawled_data": []
+            }
+
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "message": f"Crawlee Execution Error: {str(e)}"
+        }
+
 async def run_full_scan_async(email):
     """
-    Async Wrapper: Menjalankan Holehe dan Hudson Rock API secara PARALEL untuk efisiensi kecepatan.
+    Async Engine: Menjalankan Holehe, Hudson Rock API, dan Crawlee Scraper secara PARALEL.
     """
     print("====================================================")
-    print("   UBA OSINT & DATA BREACH CHECKER MODULE (DANU)   ")
+    print("   UBA OSINT, DARKWEB & CRAWLEE ENGINE (DANU)       ")
     print("====================================================")
-    print(f"[*] Starting Parallel Async Scan for: {email}...")
+    print(f"[*] Executing 3-Way Parallel Async Engine for: {email}...")
 
     loop = asyncio.get_running_loop()
     
-    # Menjalankan kedua modul secara serentak di ThreadPool terpisah
+    # Menjalankan KETIGA modul secara serentak di ThreadPool
     with concurrent.futures.ThreadPoolExecutor() as pool:
         task_footprint = loop.run_in_executor(pool, check_holehe_sync, email)
         task_breach = loop.run_in_executor(pool, check_stealer_log_and_breach_sync, email)
+        task_crawlee = loop.run_in_executor(pool, run_crawlee_scraper_sync, email)
         
-        # Nunggu kedua task selesai barengan
-        footprint_res, breach_res = await asyncio.gather(task_footprint, task_breach)
+        # Nunggu ketiga modul beres barengan
+        footprint_res, breach_res, crawlee_res = await asyncio.gather(
+            task_footprint, task_breach, task_crawlee
+        )
 
     return {
         "target_email": email,
         "footprint_raw": footprint_res,
-        "stealer_and_breach_data": breach_res
+        "stealer_and_breach_data": breach_res,
+        "crawlee_osint_scraped_data": crawlee_res
     }
 
 def run_full_scan(email):
     """
-    Fungsi Synchronous wrapper biar Fahri & Adema gampang panggilnya (main.run_full_scan(email)).
+    Fungsi Synchronous wrapper biar gampang dipanggil dari luar (main.run_full_scan(email)).
     """
     return asyncio.run(run_full_scan_async(email))
 
@@ -99,10 +141,13 @@ if __name__ == "__main__":
     if target:
         results = run_full_scan(target)
         
-        print("\n================--- [ FINAL RESULT ] ---================")
-        print("\n--- [FOOTPRINT - HOLEHE] ---")
+        print("\n================--- [ FINAL INTEGRATED RESULT ] ---================")
+        print("\n--- [1. FOOTPRINT - HOLEHE] ---")
         print(results["footprint_raw"])
         
-        print("\n--- [STEALER LOG & BREACH DATA] ---")
+        print("\n--- [2. STEALER LOG & BREACH DATA] ---")
         print(json.dumps(results["stealer_and_breach_data"], indent=4))
-        print("\n========================================================")
+        
+        print("\n--- [3. CRAWLEE OSINT LIVE SCRAPER DATA] ---")
+        print(json.dumps(results["crawlee_osint_scraped_data"], indent=4))
+        print("\n==================================================================")
